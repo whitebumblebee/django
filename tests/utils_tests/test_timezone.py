@@ -12,14 +12,17 @@ except ImportError:
     except ImportError:
         zoneinfo = None
 
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, ignore_warnings, override_settings
 from django.utils import timezone
+from django.utils.deprecation import RemovedInDjango50Warning
 
 CET = pytz.timezone("Europe/Paris")
 EAT = timezone.get_fixed_timezone(180)      # Africa/Nairobi
 ICT = timezone.get_fixed_timezone(420)      # Asia/Bangkok
 UTC = datetime.timezone.utc
 
+# TODO: Remove the zoneinfo = None fallback and these helpers.
+#   ???: for 4.0 or 5.0?
 HAS_ZONEINFO = zoneinfo is not None
 
 if not HAS_ZONEINFO:
@@ -36,6 +39,39 @@ else:
 
 
 class TimezoneTests(SimpleTestCase):
+
+    # TODO: Review setUp/tearDown.
+    # timezone.get_default_timezone.cache_clear() was required for
+    # USE_PYTZ_DEPRECATION_SHIM test. 🤔
+    # TODO: Add similar tests for BaseDatabaseWrapper.timezone()
+    def test_default_timezone_is_zoneinfo(self):
+        timezone.get_default_timezone.cache_clear()
+        self.assertTrue(
+            isinstance(timezone.get_default_timezone(), zoneinfo.ZoneInfo)
+        )
+        timezone.get_default_timezone.cache_clear()
+
+    @ignore_warnings(category=RemovedInDjango50Warning)
+    @override_settings(USE_PYTZ_DEPRECATION_SHIM=True)
+    def test_setting_allows_fallback_to_pytz(self):
+        timezone.get_default_timezone.cache_clear()
+        self.assertTrue(
+            isinstance(timezone.get_default_timezone(), pytz.BaseTzInfo)
+        )
+        timezone.get_default_timezone.cache_clear()
+
+    @override_settings(USE_PYTZ_DEPRECATION_SHIM=True)
+    def test_setting_allows_fallback_to_pytz_warning(self):
+        timezone.get_default_timezone.cache_clear()
+        msg = (
+            "The USE_PYTZ_DEPRECATION_SHIM setting, and support for pytz "
+            "timezones is deprecated in favor of the stdlib zonefinfo module."
+            " Please update your code to use zoneinfo and remove the "
+            "USE_PYTZ_DEPRECATION_SHIM setting."
+        )
+        with self.assertRaisesMessage(RemovedInDjango50Warning, msg):
+            timezone.get_default_timezone()
+        timezone.get_default_timezone.cache_clear()
 
     def test_now(self):
         with override_settings(USE_TZ=True):

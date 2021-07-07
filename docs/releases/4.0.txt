@@ -28,6 +28,29 @@ The Django 3.2.x series is the last to support Python 3.6 and 3.7.
 What's new in Django 4.0
 ========================
 
+``zoneinfo`` is now the default timezone implementation
+-------------------------------------------------------
+
+* The ``zoneinfo`` module is included in the Python stdlib from Python 3.9. It
+  is now the default timezone implementation used by Django.
+  ``timezone.get_default_timezone()`` and related functions return ``zoneinfo``
+  objects by default.
+
+* ``backports.zoneinfo`` is available for Python 3.8.
+
+  ``tzdata`` is needed FILL_THIS_IN(...roughly, when is the DB not installed on
+  local system... — how will a user know?)
+
+* ``USE_PYTZ_DEPRECATION_SHIM`` is provided to continue using ``pytz`` during
+  the 4.x release cycle. This setting will be removed in Django 5.0.
+
+  You may need to use this if FILL_THIS_IN(...timezone maths over offset
+  changes...).
+
+* The ``timezone.utc`` alias is now ``zoneinfo.ZoneInfo('UTC')``. If you are
+  using ``USE_PYTZ_DEPRECATION_SHIM`` and ``timezone.utc`` you will need to
+  switch to ``pytz.utc`` throughout.
+
 Functional unique constraints
 -----------------------------
 

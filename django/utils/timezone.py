@@ -3,6 +3,13 @@ Timezone-related classes and functions.
 """
 
 import functools
+import warnings
+
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
+
 from contextlib import ContextDecorator
 from datetime import datetime, timedelta, timezone, tzinfo
 
@@ -10,6 +17,7 @@ import pytz
 from asgiref.local import Local
 
 from django.conf import settings
+from django.utils.deprecation import RemovedInDjango50Warning
 
 __all__ = [
     'utc', 'get_fixed_timezone',
@@ -20,9 +28,10 @@ __all__ = [
     'is_aware', 'is_naive', 'make_aware', 'make_naive',
 ]
 
-
+# ???: Can we have a fallback for this to pytz.utc?
 # UTC time zone as a tzinfo instance.
-utc = pytz.utc
+utc = zoneinfo.ZoneInfo('UTC')
+
 
 _PYTZ_BASE_CLASSES = (pytz.tzinfo.BaseTzInfo, pytz._FixedOffset)
 # In releases prior to 2018.4, pytz.UTC was not a subclass of BaseTzInfo
@@ -49,7 +58,17 @@ def get_default_timezone():
 
     This is the time zone defined by settings.TIME_ZONE.
     """
-    return pytz.timezone(settings.TIME_ZONE)
+    if settings.USE_PYTZ_DEPRECATION_SHIM:
+        msg = (
+            "The USE_PYTZ_DEPRECATION_SHIM setting, and support for pytz "
+            "timezones is deprecated in favor of the stdlib zonefinfo module."
+            " Please update your code to use zoneinfo and remove the "
+            "USE_PYTZ_DEPRECATION_SHIM setting."
+        )
+        warnings.warn(msg, RemovedInDjango50Warning, stacklevel=3)
+        return pytz.timezone(settings.TIME_ZONE)
+
+    return zoneinfo.ZoneInfo(settings.TIME_ZONE)
 
 
 # This function exists for consistency with get_current_timezone_name
